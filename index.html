@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Klas Layout Tool Pro</title>
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    <style>
+        :root {
+            --bg-dark: #121212;
+            --panel-dark: #1e1e1e;
+            --accent: #bb86fc;
+            --text: #e0e0e0;
+            --desk-bg: #2c2c2c;
+            --border: #333;
+            --pinned: #03dac6;
+        }
+
+        body { margin: 0; font-family: 'Segoe UI', sans-serif; background-color: var(--bg-dark); color: var(--text); display: flex; height: 100vh; overflow: hidden; }
+
+        /* Mobile Block Overlay */
+        #mobile-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--bg-dark);
+            z-index: 9999;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 20px;
+        }
+
+        @media (max-width: 768px) {
+            #mobile-overlay { display: flex; }
+        }
+
+        /* Zijbalken */
+        aside { width: 260px; background-color: var(--panel-dark); border-right: 1px solid var(--border); padding: 20px; display: flex; flex-direction: column; z-index: 2000; }
+        aside.right { border-right: none; border-left: 1px solid var(--border); }
+        main { flex-grow: 1; position: relative; padding: 20px; display: flex; flex-direction: column; }
+
+        #classroom-area { flex-grow: 1; border: 2px dashed var(--border); border-radius: 12px; position: relative; background-color: #181818; overflow: hidden; }
+
+        /* Tafeltje Styling */
+        .desk {
+            width: 100px;
+            height: 70px;
+            background: var(--desk-bg);
+            border: 1.5px solid var(--accent);
+            position: absolute;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: move;
+            font-size: 13px;
+            box-sizing: border-box;
+            border-radius: 6px;
+            user-select: none;
+            padding: 5px;
+        }
+
+        .desk.teacher { background: #333; border: 2px solid white; color: white; font-weight: bold; width: 140px; height: 80px; }
+        .desk.rotated { width: 70px; height: 100px; }
+        .desk.rotated.teacher { width: 80px; height: 140px; }
+        .desk.empty { border: 1.5px dashed #555; color: #666; }
+        .desk.is-pinned { border-color: var(--pinned); }
+
+        /* Label */
+        .desk-label { pointer-events: none; width: 100%; padding: 10px; word-wrap: break-word; }
+
+        /* Icoontjes BINNEN het vakje */
+        .icon-btn {
+            position: absolute;
+            width: 18px;
+            height: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 10px;
+            border-radius: 4px;
+            border: 1px solid rgba(255,255,255,0.1);
+            z-index: 10;
+            opacity: 0.2;
+            transition: opacity 0.2s;
+        }
+
+        .desk:hover .icon-btn { opacity: 1; }
+        .pin-btn { top: 4px; left: 4px; background: #444; color: #aaa; }
+        .pin-btn.active { background: var(--pinned); color: black; opacity: 1; }
+        .rotate-btn { top: 4px; right: 4px; background: var(--accent); color: black; }
+
+        /* UI Elementen */
+        h2 { color: var(--accent); margin: 0 0 10px 0; font-size: 1.2em; }
+        textarea { flex-grow: 1; background: #252525; border: 1px solid var(--border); color: white; padding: 12px; border-radius: 8px; resize: none; margin-bottom: 15px; }
+        .button-group { display: flex; flex-direction: column; gap: 8px; }
+        button { padding: 10px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .btn-primary { background: var(--accent); color: #000; }
+        .btn-secondary { background: #333; color: white; }
+        .btn-success { background: #03dac6; color: #000; }
+        .btn-danger { background: #cf6679; color: #000; }
+
+        /* Print Mode */
+        .print-mode #classroom-area { background: white !important; }
+        .print-mode .desk { background: white !important; color: black !important; border: 1px solid black !important; }
+        .print-mode .desk.teacher { border-width: 3px !important; }
+        .print-mode .icon-btn { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <div id="mobile-overlay">
+        <h1>🖥️ Desktop Vereist</h1>
+        <p>Deze klas layout tool werkt alleen op een computer met een groter scherm.</p>
+    </div>
+
+    <aside>
+        <h2>Templates</h2>
+        <div class="button-group">
+            <button class="btn-secondary" onclick="loadTemplate('rijen')">Rijen</button>
+            <button class="btn-secondary" onclick="loadTemplate('duos')">5x3 Duo's</button>
+            <button class="btn-secondary" onclick="loadTemplate('groepjes')">Groepjes</button>
+            <button class="btn-secondary" onclick="loadTemplate('hoefijzer')">Hoefijzer</button>
+        </div>
+        <hr style="border:0; border-top:1px solid var(--border); margin:20px 0;">
+        <div class="button-group">
+            <button class="btn-primary" onclick="createDesk()">+ Leerling Tafel</button>
+            <button class="btn-secondary" onclick="createDesk(300, 20, 'BUREAU LERAAR', false, false, true)">+ Leraar Bureau</button>
+        </div>
+    </aside>
+
+    <main>
+        <div id="classroom-area"></div>
+    </main>
+
+    <aside class="right">
+        <h2>Leerlingen</h2>
+        <textarea id="nameList" oninput="saveData()" placeholder="Namen hier..."></textarea>
+        <div class="button-group">
+            <button class="btn-success" onclick="distributeNames()">Verdeel Namen</button>
+            <button class="btn-secondary" onclick="exportLayout()">Exporteer PNG</button>
+            <button class="btn-secondary" onclick="clearDeskTexts()">Maak Leeg</button>
+            <button class="btn-danger" onclick="removeAllDesks()">Reset</button>
+        </div>
+    </aside>
+
+    <script>
+        const classroom = document.getElementById('classroom-area');
+        const nameInput = document.getElementById('nameList');
+        const SNAP_THRESHOLD = 20;
+
+        window.onload = loadData;
+
+        function createDesk(x = 50, y = 50, text = 'Leeg', isRotated = false, isPinned = false, isTeacher = false) {
+            const desk = document.createElement('div');
+            desk.className = `desk ${text === 'Leeg' ? 'empty' : ''} ${isRotated ? 'rotated' : ''} ${isPinned ? 'is-pinned' : ''} ${isTeacher ? 'teacher' : ''}`;
+            desk.style.left = x + 'px';
+            desk.style.top = y + 'px';
+
+            const label = document.createElement('span');
+            label.className = 'desk-label';
+            label.innerText = text;
+            desk.appendChild(label);
+
+            const pinBtn = document.createElement('div');
+            pinBtn.className = `icon-btn pin-btn ${isPinned ? 'active' : ''}`;
+            pinBtn.innerHTML = '📌';
+            pinBtn.onclick = (e) => {
+                e.stopPropagation();
+                desk.classList.toggle('is-pinned');
+                pinBtn.classList.toggle('active');
+                saveData();
+            };
+
+            const rotBtn = document.createElement('div');
+            rotBtn.className = 'icon-btn rotate-btn';
+            rotBtn.innerHTML = '⟳';
+            rotBtn.onclick = (e) => {
+                e.stopPropagation();
+                desk.classList.toggle('rotated');
+                saveData();
+            };
+
+            if (!isTeacher) { desk.appendChild(pinBtn); }
+            desk.appendChild(rotBtn);
+            
+            desk.ondblclick = () => { desk.remove(); saveData(); };
+            makeDraggable(desk);
+            classroom.appendChild(desk);
+            saveData();
+        }
+
+        function makeDraggable(element) {
+            let p1 = 0, p2 = 0, p3 = 0, p4 = 0;
+            element.onmousedown = (e) => {
+                if (e.target.classList.contains('icon-btn')) return;
+                e.preventDefault();
+                element.style.zIndex = 1000;
+                p3 = e.clientX; p4 = e.clientY;
+                document.onmousemove = (e) => {
+                    p1 = p3 - e.clientX; p2 = p4 - e.clientY;
+                    p3 = e.clientX; p4 = e.clientY;
+                    let nX = element.offsetLeft - p1;
+                    let nY = element.offsetTop - p2;
+                    
+                    const desks = Array.from(document.querySelectorAll('.desk')).filter(d => d !== element);
+                    desks.forEach(o => {
+                        const ox = o.offsetLeft, oy = o.offsetTop, ow = o.offsetWidth, oh = o.offsetHeight;
+                        if (Math.abs(nY - oy) < SNAP_THRESHOLD) {
+                            if (Math.abs(nX - (ox + ow)) < SNAP_THRESHOLD) { nX = ox + ow; nY = oy; }
+                            if (Math.abs((nX + element.offsetWidth) - ox) < SNAP_THRESHOLD) { nX = ox - element.offsetWidth; nY = oy; }
+                        }
+                        if (Math.abs(nX - ox) < SNAP_THRESHOLD) {
+                            if (Math.abs(nY - (oy + oh)) < SNAP_THRESHOLD) { nY = oy + oh; nX = ox; }
+                            if (Math.abs((nY + element.offsetHeight) - oy) < SNAP_THRESHOLD) { nY = oy - element.offsetHeight; nX = ox; }
+                        }
+                    });
+                    element.style.left = Math.max(0, nX) + "px";
+                    element.style.top = Math.max(0, nY) + "px";
+                };
+                document.onmouseup = () => { element.style.zIndex = 10; document.onmousemove = null; saveData(); };
+            };
+        }
+
+        function distributeNames() {
+            const all = nameInput.value.split('\n').map(n => n.trim()).filter(n => n !== '');
+            const desks = Array.from(document.querySelectorAll('.desk')).filter(d => !d.classList.contains('teacher'));
+            
+            const pinnedNames = desks.filter(d => d.classList.contains('is-pinned'))
+                                    .map(d => d.querySelector('.desk-label').innerText)
+                                    .filter(n => n !== 'Leeg');
+            
+            const toShuffle = all.filter(n => !pinnedNames.includes(n));
+            const freeDesks = desks.filter(d => !d.classList.contains('is-pinned'));
+
+            freeDesks.forEach(d => { d.querySelector('.desk-label').innerText = 'Leeg'; d.classList.add('empty'); });
+            freeDesks.sort(() => Math.random() - 0.5);
+
+            toShuffle.forEach((n, i) => {
+                if (i < freeDesks.length) {
+                    freeDesks[i].querySelector('.desk-label').innerText = n;
+                    freeDesks[i].classList.remove('empty');
+                }
+            });
+            saveData();
+        }
+
+        function loadTemplate(type) {
+            if (!confirm("Wissen?")) return;
+            classroom.innerHTML = '';
+            createDesk(330, 20, 'BUREAU LERAAR', false, false, true); // Standaard bureau toevoegen
+            if (type === 'rijen') for (let r = 0; r < 4; r++) for (let c = 0; c < 6; c++) createDesk(100+(c*110), 120+(r*90));
+            if (type === 'duos') for (let r = 0; r < 5; r++) for (let k = 0; k < 3; k++) { createDesk(80+(k*250), 120+(r*90)); createDesk(180+(k*250), 120+(r*90)); }
+            if (type === 'groepjes') for (let r = 0; r < 3; r++) for (let c = 0; c < 2; c++) { 
+                let x = 150+(c*300), y = 120+(r*160); 
+                createDesk(x,y); createDesk(x+100,y); createDesk(x,y+70); createDesk(x+100,y+70); 
+            }
+            if (type === 'hoefijzer') {
+                for (let i = 0; i < 6; i++) createDesk(50, 120+(i*70), 'Leeg', true);
+                for (let i = 0; i < 5; i++) createDesk(120+(i*100), 120);
+                for (let i = 0; i < 6; i++) createDesk(620, 120+(i*70), 'Leeg', true);
+            }
+            saveData();
+        }
+
+        function saveData() {
+            const data = Array.from(document.querySelectorAll('.desk')).map(d => ({
+                x: parseInt(d.style.left), y: parseInt(d.style.top),
+                t: d.querySelector('.desk-label').innerText, 
+                r: d.classList.contains('rotated'), p: d.classList.contains('is-pinned'),
+                tc: d.classList.contains('teacher')
+            }));
+            localStorage.setItem('classroom_v9', JSON.stringify({ n: nameInput.value, d: data }));
+        }
+
+        function loadData() {
+            const s = localStorage.getItem('classroom_v9');
+            if (!s) return;
+            const data = JSON.parse(s);
+            nameInput.value = data.n;
+            classroom.innerHTML = '';
+            data.d.forEach(d => createDesk(d.x, d.y, d.t, d.r, d.p, d.tc));
+        }
+
+        function clearDeskTexts() { document.querySelectorAll('.desk:not(.teacher)').forEach(d => { d.querySelector('.desk-label').innerText = 'Leeg'; d.classList.add('empty'); }); saveData(); }
+        function removeAllDesks() { classroom.innerHTML = ''; saveData(); }
+
+        async function exportLayout() {
+            document.body.classList.add('print-mode');
+            await new Promise(r => setTimeout(r, 100));
+            html2canvas(classroom, { backgroundColor: 'white' }).then(c => {
+                const l = document.createElement('a'); l.download = 'klas.png'; l.href = c.toDataURL(); l.click();
+            }).finally(() => document.body.classList.remove('print-mode'));
+        }
+    </script>
+</body>
+</html>
