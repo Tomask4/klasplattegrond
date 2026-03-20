@@ -23,15 +23,17 @@
 
         body { margin: 0; font-family: 'Segoe UI', sans-serif; background-color: var(--bg-dark); color: var(--text); display: flex; height: 100vh; overflow: hidden; }
 
-        #mobile-overlay {
-            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: var(--bg-dark); z-index: 9999; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 20px;
-        }
-        @media (max-width: 768px) { #mobile-overlay { display: flex; } }
+        #toolbar { background-color: var(--panel-dark); border-right: 1px solid var(--border); padding: 20px 12px; display: flex; flex-direction: column; gap: 10px; align-items: center; flex-shrink: 0; width: auto; overflow-y: auto; }
+        #toolbar button { padding: 12px 8px; font-size: 0.8em; white-space: nowrap; width: 110px; }
+        #auth-ui { display: flex; flex-direction: column; align-items: center; gap: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--border); width: 100%; }
+        #auth-ui button { width: 100%; }
+        #auth-ui div { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+        .logout-icon { cursor: pointer; opacity: 0.6; transition: 0.2s; font-size: 1.1em; padding: 5px; }
+        .logout-icon:hover { opacity: 1; color: #cf6679; }
 
-        aside { width: 280px; background-color: var(--panel-dark); border-right: 1px solid var(--border); padding: 20px; display: flex; flex-direction: column; z-index: 2000; overflow-y: auto; }
-        aside.right { border-right: none; border-left: 1px solid var(--border); }
-        main { flex-grow: 1; position: relative; padding: 20px; display: flex; flex-direction: column; }
+        aside { display: none; }
+        aside.right { display: none; }
+        main { flex-grow: 1; position: relative; padding: 15px; display: flex; flex-direction: column; }
 
         #classroom-area { flex-grow: 1; border: 2px dashed var(--border); border-radius: 12px; position: relative; background-color: #181818; overflow: hidden; }
 
@@ -78,58 +80,154 @@
         .print-mode #classroom-area { background: white !important; }
         .print-mode .desk { background: white !important; color: black !important; border: 1px solid black !important; }
         .print-mode .icon-btn { display: none !important; }
+
+        /* Modal styling */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 5000; align-items: center; justify-content: center; }
+        .modal.active { display: flex; }
+        .modal-content { background: var(--panel-dark); border: 1px solid var(--border); border-radius: 12px; padding: 30px; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .modal-header h2 { margin: 0; }
+        .close-btn { background: none; border: none; color: var(--text); font-size: 1.5em; cursor: pointer; padding: 0; }
+        .close-btn:hover { color: #cf6679; }
+        .modal-section { margin-bottom: 25px; }
+        .modal-section h3 { color: var(--accent); margin-top: 0; }
+        .modal textarea { width: 100%; background: #252525; border: 1px solid var(--border); color: white; padding: 12px; border-radius: 8px; resize: vertical; min-height: 120px; }
+        .modal .button-group { display: flex; flex-direction: column; gap: 8px; }
+        .modal .saved-list { margin-top: 10px; display: flex; flex-direction: column; gap: 5px; max-height: 250px; overflow-y: auto; }
+        .modal .item-row { display: flex; justify-content: space-between; align-items: center; background: #252525; padding: 8px 12px; border-radius: 6px; font-size: 0.85em; }
+        .modal .item-row span { cursor: pointer; flex-grow: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .modal .item-row i { color: #cf6679; cursor: pointer; padding: 0 5px; font-style: normal; font-weight: bold; }
+
+        /* Mobile Overlay */
+        #mobile-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--bg-dark);
+            z-index: 10000;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 20px;
+        }
+        #mobile-overlay h1 { color: var(--accent); margin: 0 0 20px 0; font-size: 1.8em; }
+        #mobile-overlay p { color: var(--text); font-size: 1.1em; margin: 0; }
+
+        @media (max-width: 1024px) {
+            #mobile-overlay { display: flex; }
+            #toolbar { display: none; }
+            main { display: none; }
+            .modal { display: none !important; }
+        }
     </style>
 </head>
 <body>
 
     <div id="mobile-overlay">
         <h1>🖥️ Desktop Vereist</h1>
-        <p>Gebruik een computer om je klassen te beheren.</p>
+        <p>Gebruik een computer of tablet in landscape modus om de klassaul in te stellen.</p>
     </div>
 
-    <aside>
-        <div class="auth-section" id="auth-ui">
-            <button class="btn-primary" onclick="login()">Log in met Google</button>
-        </div>
-
-        <h2>Mijn Klas Templates</h2>
-        <div id="custom-templates-list" class="saved-list"></div>
-        <button class="btn-secondary" style="margin-top:10px;" onclick="saveAsCustomTemplate()">+ Opstelling opslaan</button>
-
-        <h2 style="margin-top:30px;">Standaard Layouts</h2>
-        <div class="button-group">
-            <button class="btn-secondary" onclick="loadTemplate('rijen')">Rijen</button>
-            <button class="btn-secondary" onclick="loadTemplate('duos')">Duos</button>
-            <button class="btn-secondary" onclick="loadTemplate('groepjes')">Groepjes</button>
-        </div>
-
-        <hr style="border:0; border-top:1px solid var(--border); margin:20px 0;">
-        <div class="button-group">
-            <button class="btn-primary" onclick="createDesk()">+ Leerling Tafel</button>
-            <button class="btn-secondary" onclick="createDesk(300, 20, 'BUREAU LERAAR', false, false, true)">+ Leraar Bureau</button>
-        </div>
-    </aside>
+    <div id="toolbar">
+        <div id="auth-ui" style="display: flex; gap: 8px;"></div>
+        <button class="btn-secondary" onclick="openModal('templates-modal')">📋 Templates</button>
+        <button class="btn-secondary" onclick="openModal('layouts-modal')">📐 Layouts</button>
+        <button class="btn-secondary" onclick="openModal('desks-modal')">➕ Tafels</button>
+        <button class="btn-secondary" onclick="openModal('classes-modal')">💾 Klassen</button>
+        <button class="btn-secondary" onclick="openModal('settings-modal')">⚙️ Leerlingen</button>
+    </div>
 
     <main>
         <div id="classroom-area"></div>
+        <div style="font-size: 0.85em; color: #999; margin-top: 8px; padding: 0 5px;">
+            💡 Tip: Dubbelklik op een tafel om deze te verwijderen
+        </div>
     </main>
 
-    <aside class="right">
-        <h2>Mijn Klassen</h2>
-        <div id="active-class-display" class="active-class-name">Geen klas geselecteerd</div>
-        <div id="classes-list" class="saved-list" style="margin-bottom: 20px;"></div>
-        <button class="btn-success" onclick="saveCurrentClass()">+ Sla huidige klas op</button>
-
-        <h2 style="margin-top:30px;">Leerlingen</h2>
-        <textarea id="nameList" oninput="saveData()" placeholder="Namen hier..."></textarea>
-        
-        <div class="button-group">
-            <button class="btn-success" onclick="distributeNames()">Verdeel Namen</button>
-            <button class="btn-secondary" onclick="exportLayout()">Exporteer PNG</button>
-            <button class="btn-secondary" onclick="clearDeskTexts()">Maak Tafels Leeg</button>
-            <button class="btn-danger" onclick="removeAllDesks()">Reset Lokaal</button>
+    <!-- TEMPLATES MODAL -->
+    <div class="modal" id="templates-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📋 Mijn Templates</h2>
+                <button class="close-btn" onclick="closeModal('templates-modal')">✕</button>
+            </div>
+            <div class="modal-section">
+                <div id="custom-templates-list" class="saved-list"></div>
+                <button class="btn-secondary" style="margin-top:15px;" onclick="saveAsCustomTemplate()">+ Opstelling opslaan</button>
+            </div>
         </div>
-    </aside>
+    </div>
+
+    <!-- LAYOUTS MODAL -->
+    <div class="modal" id="layouts-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📐 Standaard Layouts</h2>
+                <button class="close-btn" onclick="closeModal('layouts-modal')">✕</button>
+            </div>
+            <div class="button-group">
+                <button class="btn-secondary" onclick="loadTemplate('rijen'); closeModal('layouts-modal')">Rijen</button>
+                <button class="btn-secondary" onclick="loadTemplate('duos'); closeModal('layouts-modal')">Duos</button>
+                <button class="btn-secondary" onclick="loadTemplate('groepjes'); closeModal('layouts-modal')">Groepjes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- DESKS MODAL -->
+    <div class="modal" id="desks-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>➕ Tafels Beheren</h2>
+                <button class="close-btn" onclick="closeModal('desks-modal')">✕</button>
+            </div>
+            <div class="button-group">
+                <button class="btn-primary" onclick="createDesk(); closeModal('desks-modal')">+ Leerling Tafel</button>
+                <button class="btn-secondary" onclick="createDesk(300, 20, 'BUREAU LERAAR', false, false, true); closeModal('desks-modal')">+ Leraar Bureau</button>
+                <button class="btn-secondary" onclick="clearDeskTexts()">Maak Tafels Leeg</button>
+                <button class="btn-danger" onclick="removeAllDesks()">Reset Lokaal</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CLASSES MODAL -->
+    <div class="modal" id="classes-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>💾 Mijn Klassen</h2>
+                <button class="close-btn" onclick="closeModal('classes-modal')">✕</button>
+            </div>
+            <div class="modal-section">
+                <div id="active-class-display" class="active-class-name">Geen klas geselecteerd</div>
+                <div id="classes-list" class="saved-list" style="margin-bottom: 20px;"></div>
+                <button class="btn-success" onclick="saveCurrentClass()">+ Sla huidige klas op</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SETTINGS MODAL -->
+    <div class="modal" id="settings-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>⚙️ Leerlingen & Export</h2>
+                <button class="close-btn" onclick="closeModal('settings-modal')">✕</button>
+            </div>
+            <div class="modal-section">
+                <h3>Leerlingenlijst</h3>
+                <textarea id="nameList" oninput="saveData()" placeholder="Namen hier (één per regel)..."></textarea>
+                <div class="button-group">
+                    <button class="btn-success" onclick="distributeNames()">Verdeel Namen</button>
+                    <button class="btn-secondary" onclick="exportLayout()">Exporteer PNG</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <aside></aside>
+    <aside class="right"></aside>
 
     <feedback-widget></feedback-widget>
     
@@ -156,6 +254,19 @@
         const classroom = document.getElementById('classroom-area');
         const nameInput = document.getElementById('nameList');
 
+        // --- MODAL FUNCTIONS ---
+        function openModal(modalId) {
+            document.getElementById(modalId).classList.add('active');
+        }
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+        window.addEventListener('click', (e) => {
+            if (e.target.classList.contains('modal')) {
+                e.target.classList.remove('active');
+            }
+        });
+
         // --- AUTH ---
         function login() { auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); }
         function logout() { if(confirm("Wil je uitloggen?")) auth.signOut(); }
@@ -165,11 +276,9 @@
             const authUi = document.getElementById('auth-ui');
             if (user) {
                 authUi.innerHTML = `
-                    <div class="user-header">
-                        <div class="user-info">
-                            <img src="${user.photoURL}">
-                            <span>Hoi, ${user.displayName.split(' ')[0]}</span>
-                        </div>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <img src="${user.photoURL}" style="width: 30px; border-radius: 50%;">
+                        <span>Hoi, ${user.displayName.split(' ')[0]}</span>
                         <span class="logout-icon" onclick="logout()" title="Uitloggen">🚪</span>
                     </div>`;
                 loadCustomTemplates();
@@ -186,12 +295,15 @@
         });
 
         // --- TAFEL LOGICA (Inclusief Docent Fix) ---
+        let deskScale = 1;
         function createDesk(x = 50, y = 50, text = 'Leeg', isRotated = false, isPinned = false, isTeacher = false) {
             const desk = document.createElement('div');
             const finalText = isTeacher ? 'BUREAU LERAAR' : text;
             
             desk.className = `desk ${finalText === 'Leeg' ? 'empty' : ''} ${isRotated ? 'rotated' : ''} ${isPinned ? 'is-pinned' : ''} ${isTeacher ? 'teacher' : ''}`;
-            desk.style.left = x + 'px'; desk.style.top = y + 'px';
+            desk.style.left = (x * deskScale) + 'px'; desk.style.top = (y * deskScale) + 'px';
+            desk.style.transform = `scale(${deskScale})`;
+            desk.style.transformOrigin = 'top left';
 
             const label = document.createElement('span');
             label.className = 'desk-label'; label.innerText = finalText;
@@ -225,8 +337,10 @@
                 document.onmousemove = (e) => {
                     p1 = p3 - e.clientX; p2 = p4 - e.clientY;
                     p3 = e.clientX; p4 = e.clientY;
-                    element.style.left = Math.max(0, element.offsetLeft - p1) + "px";
-                    element.style.top = Math.max(0, element.offsetTop - p2) + "px";
+                    const newLeft = Math.max(0, Math.min(classroom.clientWidth - element.offsetWidth, element.offsetLeft - p1));
+                    const newTop = Math.max(0, Math.min(classroom.clientHeight - element.offsetHeight, element.offsetTop - p2));
+                    element.style.left = newLeft + "px";
+                    element.style.top = newTop + "px";
                 };
                 document.onmouseup = () => { element.style.zIndex = 10; document.onmousemove = null; saveData(); };
             };
@@ -236,7 +350,7 @@
         async function saveData() {
             if (!currentUser || !activeClassId) return;
             const desksData = Array.from(document.querySelectorAll('.desk')).map(d => ({
-                x: parseInt(d.style.left), y: parseInt(d.style.top),
+                x: Math.round(parseInt(d.style.left) / deskScale), y: Math.round(parseInt(d.style.top) / deskScale),
                 t: d.querySelector('.desk-label').innerText, 
                 r: d.classList.contains('rotated'), p: d.classList.contains('is-pinned'),
                 tc: d.classList.contains('teacher')
@@ -252,7 +366,7 @@
             const name = prompt("Klasnaam (bijv. 1B):");
             if (!name) return;
             const desksData = Array.from(document.querySelectorAll('.desk')).map(d => ({
-                x: parseInt(d.style.left), y: parseInt(d.style.top),
+                x: Math.round(parseInt(d.style.left) / deskScale), y: Math.round(parseInt(d.style.top) / deskScale),
                 t: d.querySelector('.desk-label').innerText, 
                 r: d.classList.contains('rotated'), p: d.classList.contains('is-pinned'),
                 tc: d.classList.contains('teacher')
@@ -288,7 +402,17 @@
                 document.getElementById('active-class-display').innerText = "Actief: " + data.className;
                 nameInput.value = data.names || '';
                 classroom.innerHTML = '';
-                if(data.layout) data.layout.forEach(d => createDesk(d.x, d.y, d.t, d.r, d.p, d.tc || false));
+                if(data.layout) {
+                    const rect = classroom.getBoundingClientRect();
+                    let maxX = 0, maxY = 0;
+                    data.layout.forEach(d => {
+                        const w = d.tc ? 140 : 100, h = d.tc ? 80 : 70;
+                        maxX = Math.max(maxX, d.x + w);
+                        maxY = Math.max(maxY, d.y + h);
+                    });
+                    deskScale = Math.min((rect.width - 10) / maxX, (rect.height - 10) / maxY);
+                    data.layout.forEach(d => createDesk(d.x, d.y, d.t, d.r, d.p, d.tc || false));
+                }
             }
         }
 
@@ -297,7 +421,7 @@
             const name = prompt("Template naam:");
             if (!name) return;
             const layout = Array.from(document.querySelectorAll('.desk')).map(d => ({
-                x: parseInt(d.style.left), y: parseInt(d.style.top),
+                x: Math.round(parseInt(d.style.left) / deskScale), y: Math.round(parseInt(d.style.top) / deskScale),
                 r: d.classList.contains('rotated'), tc: d.classList.contains('teacher')
             }));
             await db.collection('users').doc(currentUser.uid).collection('templates').add({ name, layout });
@@ -318,6 +442,14 @@
         }
 
         function applyTemplate(layout) {
+            const rect = classroom.getBoundingClientRect();
+            let maxX = 0, maxY = 0;
+            layout.forEach(d => {
+                const w = d.tc ? 140 : 100, h = d.tc ? 80 : 70;
+                maxX = Math.max(maxX, d.x + w);
+                maxY = Math.max(maxY, d.y + h);
+            });
+            deskScale = Math.min((rect.width - 10) / maxX, (rect.height - 10) / maxY);
             classroom.innerHTML = '';
             layout.forEach(d => createDesk(d.x, d.y, 'Leeg', d.r, false, d.tc));
             saveData();
@@ -348,12 +480,18 @@
         }
 
         function loadTemplate(type) {
+            const rect = classroom.getBoundingClientRect();
+            let maxX = 0, maxY = 0, deskWidth = 100, deskHeight = 70;
+            if (type === 'rijen') { maxX = 100 + 5*110 + deskWidth; maxY = 120 + 3*90 + deskHeight; }
+            else if (type === 'duos') { maxX = 80 + 2*250 + deskWidth; maxY = 120 + 4*90 + deskHeight; }
+            else if (type === 'groepjes') { maxX = 150 + 300 + 200; maxY = 120 + 2*160 + 140; }
+            deskScale = Math.min((rect.width - 10) / maxX, (rect.height - 10) / maxY);
             classroom.innerHTML = '';
             createDesk(330, 20, 'BUREAU LERAAR', false, false, true);
             if (type === 'rijen') for (let r = 0; r < 4; r++) for (let c = 0; c < 6; c++) createDesk(100+(c*110), 120+(r*90));
             if (type === 'duos') for (let r = 0; r < 5; r++) for (let k = 0; k < 3; k++) { createDesk(80+(k*250), 120+(r*90)); createDesk(180+(k*250), 120+(r*90)); }
-            if (type === 'groepjes') for (let r = 0; r < 3; r++) for (let c = 0; c < 2; c++) { 
-                let x = 150+(c*300), y = 120+(r*160); createDesk(x,y); createDesk(x+100,y); createDesk(x,y+70); createDesk(x+100,y+70); 
+            if (type === 'groepjes') for (let r = 0; r < 3; r++) for (let c = 0; c < 2; c++) {
+                let x = 150+(c*300), y = 120+(r*160); createDesk(x,y); createDesk(x+100,y); createDesk(x,y+70); createDesk(x+100,y+70);
             }
             saveData();
         }
@@ -368,6 +506,33 @@
                 const l = document.createElement('a'); l.download = 'klasopstelling.png'; l.href = c.toDataURL(); l.click();
             }).finally(() => document.body.classList.remove('print-mode'));
         }
+
+        // --- AUTO SCALE ON RESIZE ---
+        function recalculateScale() {
+            const desks = Array.from(document.querySelectorAll('.desk'));
+            if (desks.length === 0) return;
+
+            const rect = classroom.getBoundingClientRect();
+            let maxX = 0, maxY = 0;
+            desks.forEach(d => {
+                const deskX = parseInt(d.style.left) / deskScale;
+                const deskY = parseInt(d.style.top) / deskScale;
+                const w = d.classList.contains('teacher') ? 140 : 100;
+                const h = d.classList.contains('teacher') ? 80 : 70;
+                maxX = Math.max(maxX, deskX + w);
+                maxY = Math.max(maxY, deskY + h);
+            });
+
+            const newScale = Math.min((rect.width - 10) / maxX, (rect.height - 10) / maxY, 1);
+            if (newScale !== deskScale) {
+                deskScale = newScale;
+                desks.forEach(d => {
+                    d.style.transform = `scale(${deskScale})`;
+                });
+            }
+        }
+
+        window.addEventListener('resize', recalculateScale);
     </script>
 </body>
 </html>
