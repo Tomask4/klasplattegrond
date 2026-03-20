@@ -27,7 +27,9 @@
         #toolbar button { padding: 12px 8px; font-size: 0.8em; white-space: nowrap; width: 110px; }
         #auth-ui { display: flex; flex-direction: column; align-items: center; gap: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--border); width: 100%; }
         #auth-ui button { width: 100%; }
-        #auth-ui div { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+        #auth-ui div { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%; }
+        #logout-btn { padding: 12px 8px; font-size: 0.8em; white-space: nowrap; width: 110px; background: #cf6679; color: #000; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        #logout-btn:hover { filter: brightness(1.2); }
         .logout-icon { cursor: pointer; opacity: 0.6; transition: 0.2s; font-size: 1.1em; padding: 5px; }
         .logout-icon:hover { opacity: 1; color: #cf6679; }
 
@@ -313,11 +315,11 @@
             const authUi = document.getElementById('auth-ui');
             if (user) {
                 authUi.innerHTML = `
-                    <div style="display: flex; align-items: center; gap: 10px;">
+                    <div>
                         <img src="${user.photoURL}" style="width: 30px; border-radius: 50%;">
-                        <span>Hoi, ${user.displayName.split(' ')[0]}</span>
-                        <span class="logout-icon" onclick="logout()" title="Uitloggen">🚪</span>
-                    </div>`;
+                        <span style="font-size: 0.9em;">Hoi, ${user.displayName.split(' ')[0]}</span>
+                    </div>
+                    <button id="logout-btn" onclick="logout()">⬅️ Uitloggen</button>`;
                 loadCustomTemplates();
                 loadClasses();
             } else {
