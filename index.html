@@ -81,6 +81,40 @@
         .print-mode .desk { background: white !important; color: black !important; border: 1px solid black !important; }
         .print-mode .icon-btn { display: none !important; }
 
+        /* Student Assignment Popup */
+        .student-popup {
+            position: fixed;
+            background: var(--panel-dark);
+            border: 2px solid var(--accent);
+            border-radius: 8px;
+            padding: 8px 0;
+            min-width: 150px;
+            max-width: 250px;
+            max-height: 400px;
+            overflow-y: auto;
+            z-index: 5000;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+        }
+        .student-popup .student-item {
+            padding: 10px 12px;
+            cursor: pointer;
+            color: var(--text);
+            font-size: 0.9em;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            transition: 0.15s;
+        }
+        .student-popup .student-item:hover {
+            background: var(--accent);
+            color: black;
+        }
+        .student-popup .student-divider {
+            height: 1px;
+            background: var(--border);
+            margin: 4px 0;
+        }
+
         /* Modal styling */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 5000; align-items: center; justify-content: center; }
         .modal.active { display: flex; }
@@ -136,15 +170,19 @@
         <div id="auth-ui" style="display: flex; gap: 8px;"></div>
         <button class="btn-secondary" onclick="openModal('templates-modal')">📋 Templates</button>
         <button class="btn-secondary" onclick="openModal('layouts-modal')">📐 Layouts</button>
-        <button class="btn-secondary" onclick="openModal('desks-modal')">➕ Tafels</button>
         <button class="btn-secondary" onclick="openModal('classes-modal')">💾 Klassen</button>
         <button class="btn-secondary" onclick="openModal('settings-modal')">⚙️ Leerlingen</button>
+        <button class="btn-primary" onclick="createDesk()">➕ Tafel</button>
+        <button class="btn-secondary" onclick="createDesk(300, 20, 'BUREAU LERAAR', false, false, true)">👨‍🏫 Leraar</button>
+        <button class="btn-secondary" onclick="exportLayout()">📥 Exporteer</button>
+        <button class="btn-secondary" onclick="clearDeskTexts()">🧹 Wissen</button>
+        <button class="btn-danger" onclick="removeAllDesks()">🔄 Reset</button>
     </div>
 
     <main>
         <div id="classroom-area"></div>
         <div style="font-size: 0.85em; color: #999; margin-top: 8px; padding: 0 5px;">
-            💡 Tip: Dubbelklik op een tafel om deze te verwijderen
+            💡 Tips: Dubbelklik om te verwijderen | Sleep om uit te lijnen | Rechtsklik voor leerling
         </div>
     </main>
 
@@ -220,7 +258,6 @@
                 <textarea id="nameList" oninput="saveData()" placeholder="Namen hier (één per regel)..."></textarea>
                 <div class="button-group">
                     <button class="btn-success" onclick="distributeNames()">Verdeel Namen</button>
-                    <button class="btn-secondary" onclick="exportLayout()">Exporteer PNG</button>
                 </div>
             </div>
         </div>
@@ -296,10 +333,12 @@
 
         // --- TAFEL LOGICA (Inclusief Docent Fix) ---
         let deskScale = 1;
+        const SNAP_DISTANCE = 15; // pixels, will be scaled dynamically
+
         function createDesk(x = 50, y = 50, text = 'Leeg', isRotated = false, isPinned = false, isTeacher = false) {
             const desk = document.createElement('div');
             const finalText = isTeacher ? 'BUREAU LERAAR' : text;
-            
+
             desk.className = `desk ${finalText === 'Leeg' ? 'empty' : ''} ${isRotated ? 'rotated' : ''} ${isPinned ? 'is-pinned' : ''} ${isTeacher ? 'teacher' : ''}`;
             desk.style.left = (x * deskScale) + 'px'; desk.style.top = (y * deskScale) + 'px';
             desk.style.transform = `scale(${deskScale})`;
@@ -323,6 +362,7 @@
             }
 
             desk.ondblclick = () => { if(confirm("Tafel verwijderen?")) { desk.remove(); saveData(); } };
+            desk.oncontextmenu = (e) => { e.preventDefault(); showStudentAssignmentPopup(desk, e.clientX, e.clientY); };
             makeDraggable(desk);
             classroom.appendChild(desk);
         }
@@ -342,8 +382,109 @@
                     element.style.left = newLeft + "px";
                     element.style.top = newTop + "px";
                 };
-                document.onmouseup = () => { element.style.zIndex = 10; document.onmousemove = null; saveData(); };
+                document.onmouseup = () => {
+                    element.style.zIndex = 10;
+                    document.onmousemove = null;
+                    snapDeskToNearby(element);
+                    saveData();
+                };
             };
+        }
+
+        function snapDeskToNearby(desk) {
+            const allDesks = Array.from(document.querySelectorAll('.desk')).filter(d => d !== desk);
+            if (allDesks.length === 0) return;
+
+            const scaledSnapDistance = SNAP_DISTANCE / deskScale;
+            const deskX = parseInt(desk.style.left) / deskScale;
+            const deskY = parseInt(desk.style.top) / deskScale;
+
+            let snapLeft = null, minLeftDist = scaledSnapDistance;
+            let snapTop = null, minTopDist = scaledSnapDistance;
+
+            // Find nearest horizontal alignment (left edge)
+            allDesks.forEach(other => {
+                const otherX = parseInt(other.style.left) / deskScale;
+                const dist = Math.abs(deskX - otherX);
+                if (dist < minLeftDist) {
+                    minLeftDist = dist;
+                    snapLeft = otherX;
+                }
+            });
+
+            // Find nearest vertical alignment (top edge)
+            allDesks.forEach(other => {
+                const otherY = parseInt(other.style.top) / deskScale;
+                const dist = Math.abs(deskY - otherY);
+                if (dist < minTopDist) {
+                    minTopDist = dist;
+                    snapTop = otherY;
+                }
+            });
+
+            // Apply snapping
+            if (snapLeft !== null) {
+                desk.style.left = (snapLeft * deskScale) + 'px';
+            }
+            if (snapTop !== null) {
+                desk.style.top = (snapTop * deskScale) + 'px';
+            }
+        }
+
+        function showStudentAssignmentPopup(desk, x, y) {
+            // Remove any existing popup
+            const existing = document.querySelector('.student-popup');
+            if (existing) existing.remove();
+
+            // Get student names from textarea
+            const names = nameInput.value.split('\n').map(n => n.trim()).filter(n => n !== '').filter(n => n !== 'BUREAU LERAAR');
+
+            if (names.length === 0) {
+                alert("Voeg eerst leerlingnamen toe in de instellingen.");
+                return;
+            }
+
+            // Create popup
+            const popup = document.createElement('div');
+            popup.className = 'student-popup';
+            popup.style.left = Math.min(x, window.innerWidth - 250) + 'px';
+            popup.style.top = y + 'px';
+
+            names.forEach((name, index) => {
+                const item = document.createElement('div');
+                item.className = 'student-item';
+                item.innerText = name;
+                item.onclick = () => {
+                    assignStudentToDesk(desk, name);
+                    popup.remove();
+                };
+                popup.appendChild(item);
+            });
+
+            document.body.appendChild(popup);
+
+            // Close popup on outside click
+            setTimeout(() => {
+                const closePopup = (e) => {
+                    if (!popup.contains(e.target)) {
+                        popup.remove();
+                        document.removeEventListener('click', closePopup);
+                    }
+                };
+                document.addEventListener('click', closePopup);
+            }, 10);
+        }
+
+        function assignStudentToDesk(desk, studentName) {
+            const label = desk.querySelector('.desk-label');
+            label.innerText = studentName;
+            desk.classList.remove('empty');
+            const pinBtn = desk.querySelector('.pin-btn');
+            if (pinBtn && !desk.classList.contains('is-pinned')) {
+                desk.classList.add('is-pinned');
+                pinBtn.classList.add('active');
+            }
+            saveData();
         }
 
         // --- CLOUD OPSLAG ---
