@@ -238,7 +238,7 @@
     </div>
 
     <div id="viewonly-banner">
-        👁️ Je bekijkt een gedeelde plattegrond (alleen lezen) — <a href="https://tomask4.github.io/KlasPlattegrond" style="color: #ffd56b;">open je eigen KlasPlattegrond</a>
+        👁️ Je bekijkt een gedeelde plattegrond (alleen lezen) — <a href="https://tomask4.github.io/klasplattegrond" style="color: #ffd56b;">open je eigen KlasPlattegrond</a>
     </div>
 
     <div id="main-layout">
@@ -579,6 +579,15 @@
 
         // Initialize view-only if share param present
         checkViewOnlyMode();
+
+        // Hash-based routing: open privacy modal via #privacypolicy
+        function handleHash() {
+            if (window.location.hash === '#privacypolicy') {
+                openModal('privacy-modal');
+            }
+        }
+        window.addEventListener('hashchange', handleHash);
+        handleHash();
 
         // --- TAFEL LOGICA (Inclusief Docent Fix) ---
         let deskScale = 1;
