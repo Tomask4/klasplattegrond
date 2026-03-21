@@ -920,7 +920,14 @@
                 document.getElementById('share-link-input').value = shareUrl;
                 document.getElementById('share-link-section').style.display = 'block';
             } catch(err) {
-                showToast('Deellink aanmaken mislukt.', 'error');
+                console.error('generateShareLink fout:', err.code, err.message);
+                if (err.code === 'permission-denied') {
+                    showToast('Firestore regel ontbreekt — zie README Stap 1.', 'error');
+                } else if (err.code === 'unavailable' || err.code === 'network-request-failed') {
+                    showToast('Geen internetverbinding. Probeer opnieuw.', 'error');
+                } else {
+                    showToast('Fout: ' + (err.message || err.code), 'error');
+                }
             }
         }
 
