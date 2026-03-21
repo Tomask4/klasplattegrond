@@ -474,6 +474,9 @@
         function openModal(modalId) {
             const modal = document.getElementById(modalId);
             modal.classList.add('active');
+            if (modalId === 'privacy-modal') {
+                history.pushState(null, '', '#privacypolicy');
+            }
             // Focus first focusable element for accessibility
             setTimeout(() => {
                 const first = modal.querySelector('button, input, textarea, [tabindex]');
@@ -482,6 +485,9 @@
         }
         function closeModal(modalId) {
             document.getElementById(modalId).classList.remove('active');
+            if (modalId === 'privacy-modal' && window.location.hash === '#privacypolicy') {
+                history.pushState(null, '', window.location.pathname + window.location.search);
+            }
         }
         function switchTab(tabId, button) {
             const modal = button.closest('.modal-content');
@@ -492,13 +498,22 @@
         }
         window.addEventListener('click', (e) => {
             if (e.target.classList.contains('modal')) {
+                const modalId = e.target.id;
                 e.target.classList.remove('active');
+                if (modalId === 'privacy-modal' && window.location.hash === '#privacypolicy') {
+                    history.pushState(null, '', window.location.pathname + window.location.search);
+                }
             }
         });
         // Escape key closes modals
         window.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
-                document.querySelectorAll('.modal.active').forEach(m => m.classList.remove('active'));
+                document.querySelectorAll('.modal.active').forEach(m => {
+                    m.classList.remove('active');
+                    if (m.id === 'privacy-modal' && window.location.hash === '#privacypolicy') {
+                        history.pushState(null, '', window.location.pathname + window.location.search);
+                    }
+                });
             }
         });
 
