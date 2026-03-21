@@ -25,6 +25,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-check-compat.js"></script>
 
     <style>
         :root {
@@ -443,6 +444,14 @@
         };
 
         firebase.initializeApp(firebaseConfig);
+
+        // App Check met reCAPTCHA v3 — vervang de key met jouw eigen site key
+        const appCheck = firebase.appCheck();
+        appCheck.activate(
+            new firebase.appCheck.ReCaptchaV3Provider('6LfgQpIsAAAAAK1i_dCG5idJeW9brn2D-55k0P4n'),
+            true // auto-refresh tokens
+        );
+
         const auth = firebase.auth();
         const db = firebase.firestore();
         let currentUser = null;
