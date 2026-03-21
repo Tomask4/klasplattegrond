@@ -3,7 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Klas Layout Tool - Cloud v12</title>
+    <!-- Favicons - Plak dit in de <head> van je HTML -->
+
+    <!-- Standard favicons -->
+    <link rel="icon" type="image/png" sizes="16x16" href="https://i.ibb.co/R44VvW92/favicon-16x16-png.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="https://i.ibb.co/dvgb79F/favicon-32x32-png.png">
+    <link rel="icon" type="image/png" sizes="48x48" href="https://i.ibb.co/WvtnbNQk/favicon-48x48-png.png">
+
+    <!-- Apple Touch Icon (iOS) -->
+    <link rel="apple-touch-icon" sizes="180x180" href="https://i.ibb.co/5gm19T3Q/apple-touch-icon-png.png">
+
+    <!-- Android Chrome -->
+    <link rel="icon" type="image/png" sizes="192x192" href="https://i.ibb.co/Tq4Xf7jH/android-chrome-192x192-png.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="https://i.ibb.co/sdsnJBGw/android-chrome-512x512-png.png">
+
+    <!-- Standaard fallback -->
+    <link rel="shortcut icon" href="https://i.ibb.co/dvgb79F/favicon-32x32-png.png">
+    <title>KlasPlattegrond</title>
     
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
@@ -21,7 +37,9 @@
             --pinned: #03dac6;
         }
 
-        body { margin: 0; font-family: 'Segoe UI', sans-serif; background-color: var(--bg-dark); color: var(--text); display: flex; height: 100vh; overflow: hidden; }
+        body { margin: 0; font-family: 'Segoe UI', sans-serif; background-color: var(--bg-dark); color: var(--text); display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+
+        #main-layout { display: flex; flex: 1; overflow: hidden; }
 
         #toolbar { background-color: var(--panel-dark); border-right: 1px solid var(--border); padding: 20px 12px; display: flex; flex-direction: column; gap: 10px; align-items: center; flex-shrink: 0; width: auto; overflow-y: auto; }
         #toolbar button { padding: 12px 8px; font-size: 0.8em; white-space: nowrap; width: 110px; }
@@ -134,6 +152,13 @@
         .modal .item-row span { cursor: pointer; flex-grow: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .modal .item-row i { color: #cf6679; cursor: pointer; padding: 0 5px; font-style: normal; font-weight: bold; }
 
+        /* Tab styling */
+        .tab-btn { background: #252525; color: var(--text); border: none; padding: 10px 16px; cursor: pointer; border-radius: 6px; font-size: 0.9em; transition: 0.2s; }
+        .tab-btn:hover { background: #333; }
+        .tab-btn.active { background: var(--accent); color: black; font-weight: bold; }
+        .modal-tab { display: none; }
+        .modal-tab.active { display: block; }
+
         /* Mobile Overlay */
         #mobile-overlay {
             display: none;
@@ -159,26 +184,76 @@
             main { display: none; }
             .modal { display: none !important; }
         }
+
+        /* Toast notification */
+        #toast {
+            position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
+            background: #1e1e1e; border: 1px solid var(--border); color: var(--text);
+            padding: 10px 20px; border-radius: 8px; font-size: 0.85em;
+            opacity: 0; transition: opacity 0.3s, transform 0.3s; z-index: 9999;
+            pointer-events: none; white-space: nowrap;
+        }
+        #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+        #toast.error { border-color: #cf6679; color: #cf6679; }
+        #toast.success { border-color: #03dac6; color: #03dac6; }
+
+        /* Share link input */
+        .share-input-row { display: flex; gap: 8px; margin-top: 8px; }
+        .share-input-row input { flex: 1; background: #252525; border: 1px solid var(--border); color: white; padding: 10px 12px; border-radius: 6px; font-size: 0.85em; }
+        .share-input-row input:focus { outline: none; border-color: var(--accent); }
+
+        /* Privacy modal */
+        .privacy-text { font-size: 0.88em; line-height: 1.7; color: #ccc; }
+        .privacy-text h4 { color: var(--accent); margin: 16px 0 6px; font-size: 0.95em; }
+        .privacy-text p { margin: 0 0 8px; }
+        .privacy-text ul { margin: 0 0 8px; padding-left: 18px; }
+
+        /* View-only banner */
+        #viewonly-banner {
+            display: none; background: #2c1f00; border-bottom: 2px solid #bb8500;
+            color: #ffd56b; padding: 10px 20px; font-size: 0.9em;
+            text-align: center; flex-shrink: 0;
+        }
+        #viewonly-banner.show { display: block; }
+
+        /* Focus visible for keyboard nav */
+        button:focus-visible, [tabindex]:focus-visible {
+            outline: 2px solid var(--accent); outline-offset: 2px;
+        }
     </style>
 </head>
 <body>
 
     <div id="mobile-overlay">
         <h1>🖥️ Desktop Vereist</h1>
-        <p>Gebruik een computer of tablet in landscape modus om de klassaul in te stellen.</p>
+        <p>KlasPlattegrond werkt op een computer of tablet in landscape-modus.</p>
+        <div style="margin-top: 24px; display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 300px;">
+            <button class="btn-primary" onclick="sendLinkByEmail()" style="width:100%; padding: 14px;">
+                📧 Stuur link naar mezelf
+            </button>
+            <button class="btn-secondary" onclick="copyLink()" style="width:100%; padding: 14px;">
+                🔗 Kopieer link
+            </button>
+        </div>
     </div>
 
+    <div id="viewonly-banner">
+        👁️ Je bekijkt een gedeelde plattegrond (alleen lezen) — <a href="/" style="color: #ffd56b;">open je eigen KlasPlattegrond</a>
+    </div>
+
+    <div id="main-layout">
     <div id="toolbar">
         <div id="auth-ui" style="display: flex; gap: 8px;"></div>
-        <button class="btn-secondary" onclick="openModal('templates-modal')">📋 Templates</button>
-        <button class="btn-secondary" onclick="openModal('layouts-modal')">📐 Layouts</button>
-        <button class="btn-secondary" onclick="openModal('classes-modal')">💾 Klassen</button>
-        <button class="btn-secondary" onclick="openModal('settings-modal')">⚙️ Leerlingen</button>
-        <button class="btn-primary" onclick="createDesk()">➕ Tafel</button>
-        <button class="btn-secondary" onclick="createDesk(300, 20, 'BUREAU LERAAR', false, false, true)">👨‍🏫 Leraar</button>
-        <button class="btn-secondary" onclick="exportLayout()">📥 Exporteer</button>
-        <button class="btn-secondary" onclick="clearDeskTexts()">🧹 Wissen</button>
-        <button class="btn-danger" onclick="removeAllDesks()">🔄 Reset</button>
+        <button class="btn-secondary" onclick="openModal('templates-layouts-modal')" aria-label="Layouts openen">📐 Layouts</button>
+        <button class="btn-secondary" onclick="openModal('classes-students-modal')" aria-label="Klassen openen">💾 Klassen</button>
+        <button class="btn-primary" onclick="createDesk()" aria-label="Nieuwe leerlingstafel toevoegen">➕ Tafel</button>
+        <button class="btn-secondary" onclick="createDesk(300, 20, 'BUREAU LERAAR', false, false, true)" aria-label="Leraarsbureau toevoegen">👨‍🏫 Leraar</button>
+        <button class="btn-secondary" onclick="exportLayout()" aria-label="Exporteer als afbeelding">📥 Exporteer</button>
+        <button class="btn-secondary" onclick="shareClass()" aria-label="Deel deze plattegrond">🔗 Delen</button>
+        <button class="btn-secondary" onclick="clearDeskTexts()" aria-label="Leerlingnamen wissen">🧹 Wissen</button>
+        <button class="btn-danger" onclick="removeAllDesks()" aria-label="Alle tafels verwijderen">🔄 Reset</button>
+        <div style="flex-grow:1"></div>
+        <button class="btn-secondary" onclick="openModal('privacy-modal')" style="font-size:0.7em; opacity:0.6;" aria-label="Privacyverklaring">🔒 Privacy</button>
     </div>
 
     <main>
@@ -187,32 +262,36 @@
             💡 Tips: Dubbelklik om te verwijderen | Sleep om uit te lijnen | Rechtsklik voor leerling
         </div>
     </main>
+    </div> <!-- /#main-layout -->
 
-    <!-- TEMPLATES MODAL -->
-    <div class="modal" id="templates-modal">
+    <div id="toast" role="status" aria-live="polite"></div>
+
+    <!-- TEMPLATES & LAYOUTS MODAL -->
+    <div class="modal" id="templates-layouts-modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>📋 Mijn Templates</h2>
-                <button class="close-btn" onclick="closeModal('templates-modal')">✕</button>
+                <h2>📋 Templates & Layouts</h2>
+                <button class="close-btn" onclick="closeModal('templates-layouts-modal')">✕</button>
             </div>
-            <div class="modal-section">
-                <div id="custom-templates-list" class="saved-list"></div>
-                <button class="btn-secondary" style="margin-top:15px;" onclick="saveAsCustomTemplate()">+ Opstelling opslaan</button>
+            <!-- Tab buttons -->
+            <div style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 10px;">
+                <button class="tab-btn active" onclick="switchTab('templates-tab', this)">Mijn Templates</button>
+                <button class="tab-btn" onclick="switchTab('layouts-tab', this)">Standaard Layouts</button>
             </div>
-        </div>
-    </div>
-
-    <!-- LAYOUTS MODAL -->
-    <div class="modal" id="layouts-modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>📐 Standaard Layouts</h2>
-                <button class="close-btn" onclick="closeModal('layouts-modal')">✕</button>
+            <!-- Templates Tab -->
+            <div id="templates-tab" class="modal-tab active">
+                <div class="modal-section">
+                    <div id="custom-templates-list" class="saved-list"></div>
+                    <button class="btn-secondary" style="margin-top:15px;" onclick="saveAsCustomTemplate()">+ Opstelling opslaan</button>
+                </div>
             </div>
-            <div class="button-group">
-                <button class="btn-secondary" onclick="loadTemplate('rijen'); closeModal('layouts-modal')">Rijen</button>
-                <button class="btn-secondary" onclick="loadTemplate('duos'); closeModal('layouts-modal')">Duos</button>
-                <button class="btn-secondary" onclick="loadTemplate('groepjes'); closeModal('layouts-modal')">Groepjes</button>
+            <!-- Layouts Tab -->
+            <div id="layouts-tab" class="modal-tab">
+                <div class="button-group">
+                    <button class="btn-secondary" onclick="loadTemplate('rijen'); closeModal('templates-layouts-modal')">Rijen</button>
+                    <button class="btn-secondary" onclick="loadTemplate('duos'); closeModal('templates-layouts-modal')">Duos</button>
+                    <button class="btn-secondary" onclick="loadTemplate('groepjes'); closeModal('templates-layouts-modal')">Groepjes</button>
+                </div>
             </div>
         </div>
     </div>
@@ -233,34 +312,108 @@
         </div>
     </div>
 
-    <!-- CLASSES MODAL -->
-    <div class="modal" id="classes-modal">
+    <!-- CLASSES & STUDENTS MODAL -->
+    <div class="modal" id="classes-students-modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>💾 Mijn Klassen</h2>
-                <button class="close-btn" onclick="closeModal('classes-modal')">✕</button>
+                <h2>💾 Klassen & Leerlingen</h2>
+                <button class="close-btn" onclick="closeModal('classes-students-modal')">✕</button>
             </div>
-            <div class="modal-section">
-                <div id="active-class-display" class="active-class-name">Geen klas geselecteerd</div>
-                <div id="classes-list" class="saved-list" style="margin-bottom: 20px;"></div>
-                <button class="btn-success" onclick="saveCurrentClass()">+ Sla huidige klas op</button>
+            <!-- Tab buttons -->
+            <div style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 10px;">
+                <button class="tab-btn active" onclick="switchTab('classes-tab', this)">Mijn Klassen</button>
+                <button class="tab-btn" onclick="switchTab('students-tab', this)">Leerlingen</button>
+            </div>
+            <!-- Classes Tab -->
+            <div id="classes-tab" class="modal-tab active">
+                <div class="modal-section">
+                    <div id="active-class-display" class="active-class-name">Geen klas geselecteerd</div>
+                    <div id="classes-list" class="saved-list" style="margin-bottom: 20px;"></div>
+                    <button class="btn-success" onclick="saveCurrentClass()">+ Sla huidige klas op</button>
+                </div>
+            </div>
+            <!-- Students Tab -->
+            <div id="students-tab" class="modal-tab">
+                <div class="modal-section">
+                    <h3>Leerlingenlijst</h3>
+                    <textarea id="nameList" oninput="saveData()" placeholder="Namen hier (één per regel)..."></textarea>
+
+                    <div class="button-group">
+                        <button class="btn-success" onclick="distributeRandomly()">Verdeel Namen (Random)</button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- SETTINGS MODAL -->
-    <div class="modal" id="settings-modal">
+    <!-- SHARE MODAL -->
+    <div class="modal" id="share-modal" role="dialog" aria-modal="true" aria-labelledby="share-modal-title">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>⚙️ Leerlingen & Export</h2>
-                <button class="close-btn" onclick="closeModal('settings-modal')">✕</button>
+                <h2 id="share-modal-title">🔗 Plattegrond Delen</h2>
+                <button class="close-btn" onclick="closeModal('share-modal')" aria-label="Sluiten">✕</button>
             </div>
             <div class="modal-section">
-                <h3>Leerlingenlijst</h3>
-                <textarea id="nameList" oninput="saveData()" placeholder="Namen hier (één per regel)..."></textarea>
-                <div class="button-group">
-                    <button class="btn-success" onclick="distributeNames()">Verdeel Namen</button>
+                <p style="color:#ccc; font-size:0.9em; margin-top:0;">
+                    Maak een deelbare link aan zodat collega's of ouders de opstelling kunnen <strong>bekijken</strong> zonder account. Ze kunnen niets wijzigen.
+                </p>
+                <div id="share-class-select" style="margin-bottom:16px;">
+                    <label style="font-size:0.85em; color:#999; display:block; margin-bottom:6px;">Kies een klas om te delen:</label>
+                    <div id="share-classes-list" class="saved-list"></div>
                 </div>
+                <div id="share-link-section" style="display:none;">
+                    <label style="font-size:0.85em; color:#999; display:block; margin-bottom:4px;">Deelbare link:</label>
+                    <div class="share-input-row">
+                        <input type="text" id="share-link-input" readonly aria-label="Deelbare link">
+                        <button class="btn-success" onclick="copyShareLink()">Kopieer</button>
+                    </div>
+                    <p style="font-size:0.8em; color:#888; margin-top:8px;">⚠️ Iedereen met deze link kan de opstelling bekijken.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PRIVACY MODAL -->
+    <div class="modal" id="privacy-modal" role="dialog" aria-modal="true" aria-labelledby="privacy-modal-title">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="privacy-modal-title">🔒 Privacyverklaring</h2>
+                <button class="close-btn" onclick="closeModal('privacy-modal')" aria-label="Sluiten">✕</button>
+            </div>
+            <div class="privacy-text">
+                <p><strong>KlasPlattegrond</strong> — Privacyverklaring (AVG/GDPR)</p>
+                <p>Laatste wijziging: maart 2025</p>
+
+                <h4>1. Wie is verantwoordelijk?</h4>
+                <p>KlasPlattegrond is een hulpmiddel voor leraren om de indeling van hun klaslokaal te beheren. De tool wordt aangeboden zonder commercieel oogmerk.</p>
+
+                <h4>2. Welke gegevens verwerken we?</h4>
+                <ul>
+                    <li><strong>Google-account:</strong> naam, e-mailadres en profielfoto (via Google Sign-In). Alleen voor authenticatie.</li>
+                    <li><strong>Leerlingnamen:</strong> voornamen of initialen die je zelf invoert als leraar. We verwerken deze namen niet; ze worden alleen opgeslagen zodat jij ze terug kunt zien.</li>
+                    <li><strong>Klasopstelling:</strong> de posities van tafels en de bijbehorende namen.</li>
+                </ul>
+
+                <h4>3. Waarvoor gebruiken we deze gegevens?</h4>
+                <p>Uitsluitend om de app te laten werken: opslaan en herstellen van jouw klassen en opstellingen. Er vindt <strong>geen</strong> commercieel gebruik, profilering of verkoop van gegevens plaats.</p>
+
+                <h4>4. Opslag en beveiliging</h4>
+                <p>Gegevens worden opgeslagen in Google Firebase (servers in de EU of de VS). Firebase is gecertificeerd onder de EU-US Data Privacy Framework. Toegang tot jouw gegevens is beperkt tot jouw account via Firebase Security Rules.</p>
+
+                <h4>5. Leerlinggegevens en de AVG</h4>
+                <p>Voer bij voorkeur alleen voornamen of initialen in, geen volledige namen of andere persoonsgegevens van leerlingen. Als leraar ben je zelf verantwoordelijk voor de naleving van de AVG ten aanzien van de leerlingnamen die je invoert.</p>
+
+                <h4>6. Deelfunctie</h4>
+                <p>Als je een deelbare link aanmaakt, is de bijbehorende opstelling (inclusief namen op de tafels) zichtbaar voor iedereen met die link. Gebruik de deelfunctie bewust en deel de link alleen met personen die de namen mogen zien.</p>
+
+                <h4>7. Bewaartermijn</h4>
+                <p>Gegevens worden bewaard zolang je account actief is. Je kunt klassen en templates op elk moment zelf verwijderen. Bij het verwijderen van je Google-account verwijder je ook je toegang tot de data.</p>
+
+                <h4>8. Jouw rechten</h4>
+                <p>Je hebt recht op inzage, correctie en verwijdering van je gegevens. Neem hiervoor contact op via het feedbackformulier in de app.</p>
+
+                <h4>9. Cookies en tracking</h4>
+                <p>We gebruiken geen tracking-cookies. Firebase Analytics kan anonieme gebruiksstatistieken verzamelen (aantal sessies, geen persoonsgegevens).</p>
             </div>
         </div>
     </div>
@@ -274,6 +427,11 @@
     
     <script>
         // --- FIREBASE CONFIG ---
+        // NOTE: Firestore security rules vereist voor 'shared' collectie:
+        //   match /shared/{docId} {
+        //     allow read: if true;  // publiek leesbaar voor deellinks
+        //     allow write: if request.auth != null && request.resource.data.sharedBy == request.auth.uid;
+        //   }
         const firebaseConfig = {
             apiKey: "AIzaSyAv1D8oSmUXbZpKMINsbYPpi6p5qGv8fX0",
             authDomain: "klasplattegrond.firebaseapp.com",
@@ -289,40 +447,127 @@
         const db = firebase.firestore();
         let currentUser = null;
         let activeClassId = null;
+        let isViewOnly = false;
 
         const classroom = document.getElementById('classroom-area');
         const nameInput = document.getElementById('nameList');
 
+        // --- TOAST ---
+        let toastTimer;
+        function showToast(msg, type = '') {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.className = 'show' + (type ? ' ' + type : '');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => { t.className = ''; }, 2800);
+        }
+
+        // --- MOBILE HELPERS ---
+        function sendLinkByEmail() {
+            window.location.href = 'mailto:?subject=KlasPlattegrond&body=' + encodeURIComponent(window.location.href);
+        }
+        function copyLink() {
+            navigator.clipboard.writeText(window.location.href).then(() => showToast('Link gekopieerd! ✓', 'success'));
+        }
+
         // --- MODAL FUNCTIONS ---
         function openModal(modalId) {
-            document.getElementById(modalId).classList.add('active');
+            const modal = document.getElementById(modalId);
+            modal.classList.add('active');
+            // Focus first focusable element for accessibility
+            setTimeout(() => {
+                const first = modal.querySelector('button, input, textarea, [tabindex]');
+                if (first) first.focus();
+            }, 50);
         }
         function closeModal(modalId) {
             document.getElementById(modalId).classList.remove('active');
+        }
+        function switchTab(tabId, button) {
+            const modal = button.closest('.modal-content');
+            modal.querySelectorAll('.modal-tab').forEach(tab => tab.classList.remove('active'));
+            modal.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            button.classList.add('active');
         }
         window.addEventListener('click', (e) => {
             if (e.target.classList.contains('modal')) {
                 e.target.classList.remove('active');
             }
         });
+        // Escape key closes modals
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                document.querySelectorAll('.modal.active').forEach(m => m.classList.remove('active'));
+            }
+        });
+
+        // --- VIEW-ONLY MODE (shared links) ---
+        async function checkViewOnlyMode() {
+            const params = new URLSearchParams(window.location.search);
+            const shareId = params.get('share');
+            if (!shareId) return false;
+
+            isViewOnly = true;
+            document.getElementById('viewonly-banner').classList.add('show');
+            document.getElementById('toolbar').style.display = 'none';
+            document.querySelector('main').style.flexGrow = '1';
+            document.getElementById('mobile-overlay').style.display = 'none';
+
+            try {
+                const doc = await db.collection('shared').doc(shareId).get();
+                if (!doc.exists) {
+                    showToast('Deellink niet gevonden of verlopen.', 'error');
+                    document.getElementById('viewonly-banner').innerHTML = '❌ Deze deellink bestaat niet of is verlopen.';
+                    return true;
+                }
+                const data = doc.data();
+                nameInput.value = data.names || '';
+                if (data.layout) {
+                    const rect = classroom.getBoundingClientRect();
+                    let maxX = 0, maxY = 0;
+                    data.layout.forEach(d => {
+                        const w = d.tc ? 140 : 100, h = d.tc ? 80 : 70;
+                        maxX = Math.max(maxX, d.x + w);
+                        maxY = Math.max(maxY, d.y + h);
+                    });
+                    deskScale = Math.min((rect.width - 10) / maxX, (rect.height - 10) / maxY);
+                    data.layout.forEach(d => createDesk(d.x, d.y, d.t, d.r, d.p, d.tc || false));
+                }
+                // Make desks non-draggable in view-only mode
+                document.querySelectorAll('.desk').forEach(d => {
+                    d.onmousedown = null; d.ondblclick = null; d.oncontextmenu = null;
+                    d.style.cursor = 'default';
+                    d.querySelectorAll('.icon-btn').forEach(btn => btn.style.display = 'none');
+                });
+            } catch(err) {
+                showToast('Fout bij laden van gedeelde plattegrond.', 'error');
+            }
+            return true;
+        }
 
         // --- AUTH ---
-        function login() { auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); }
+        function login() { auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(err => showToast('Inloggen mislukt: ' + err.message, 'error')); }
         function logout() { if(confirm("Wil je uitloggen?")) auth.signOut(); }
 
-        auth.onAuthStateChanged(user => {
+        auth.onAuthStateChanged(async user => {
             currentUser = user;
             const authUi = document.getElementById('auth-ui');
+            
+            // Check if this is a shared view — if so, skip auth UI
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('share')) return;
+
             if (user) {
                 authUi.innerHTML = `
                     <div>
-                        <img src="${user.photoURL}" style="width: 30px; border-radius: 50%;">
+                        <img src="${user.photoURL}" style="width: 30px; border-radius: 50%;" alt="Profielfoto">
                     </div>
-                    <button id="logout-btn" onclick="logout()">⬅️ Uitloggen</button>`;
+                    <button id="logout-btn" onclick="logout()" aria-label="Uitloggen">⬅️ Uitloggen</button>`;
                 loadCustomTemplates();
                 loadClasses();
             } else {
-                authUi.innerHTML = `<button class="btn-primary" onclick="login()">Log in met Google</button>`;
+                authUi.innerHTML = `<button class="btn-primary" onclick="login()" aria-label="Inloggen met Google">Log in met Google</button>`;
                 classroom.innerHTML = '';
                 nameInput.value = '';
                 document.getElementById('custom-templates-list').innerHTML = '';
@@ -332,9 +577,15 @@
             }
         });
 
+        // Initialize view-only if share param present
+        checkViewOnlyMode();
+
         // --- TAFEL LOGICA (Inclusief Docent Fix) ---
         let deskScale = 1;
+        let zoomLevel = 1;
         const SNAP_DISTANCE = 15; // pixels, will be scaled dynamically
+        const MIN_ZOOM = 0.3;
+        const MAX_ZOOM = 3;
 
         function createDesk(x = 50, y = 50, text = 'Leeg', isRotated = false, isPinned = false, isTeacher = false) {
             const desk = document.createElement('div');
@@ -489,18 +740,27 @@
         }
 
         // --- CLOUD OPSLAG ---
+        let saveToastTimer;
         async function saveData() {
-            if (!currentUser || !activeClassId) return;
+            if (!currentUser || !activeClassId || isViewOnly) return;
             const desksData = Array.from(document.querySelectorAll('.desk')).map(d => ({
                 x: Math.round(parseInt(d.style.left) / deskScale), y: Math.round(parseInt(d.style.top) / deskScale),
                 t: d.querySelector('.desk-label').innerText, 
                 r: d.classList.contains('rotated'), p: d.classList.contains('is-pinned'),
                 tc: d.classList.contains('teacher')
             }));
-            await db.collection('users').doc(currentUser.uid).collection('classes').doc(activeClassId).update({
-                names: nameInput.value,
-                layout: desksData
-            }).catch(err => console.error("Auto-save error:", err));
+            try {
+                await db.collection('users').doc(currentUser.uid).collection('classes').doc(activeClassId).update({
+                    names: nameInput.value,
+                    layout: desksData
+                });
+                // Show subtle save confirmation
+                clearTimeout(saveToastTimer);
+                saveToastTimer = setTimeout(() => showToast('Opgeslagen ✓', 'success'), 400);
+            } catch(err) {
+                showToast('Opslaan mislukt — controleer je verbinding.', 'error');
+                console.error("Auto-save error:", err);
+            }
         }
 
         async function saveCurrentClass() {
@@ -513,14 +773,19 @@
                 r: d.classList.contains('rotated'), p: d.classList.contains('is-pinned'),
                 tc: d.classList.contains('teacher')
             }));
-            const docRef = await db.collection('users').doc(currentUser.uid).collection('classes').add({
-                className: name,
-                names: nameInput.value,
-                layout: desksData
-            });
-            activeClassId = docRef.id;
-            document.getElementById('active-class-display').innerText = "Actief: " + name;
-            loadClasses();
+            try {
+                const docRef = await db.collection('users').doc(currentUser.uid).collection('classes').add({
+                    className: name,
+                    names: nameInput.value,
+                    layout: desksData
+                });
+                activeClassId = docRef.id;
+                document.getElementById('active-class-display').innerText = "Actief: " + name;
+                loadClasses();
+                showToast('Klas "' + name + '" opgeslagen ✓', 'success');
+            } catch(err) {
+                showToast('Opslaan mislukt — controleer je verbinding.', 'error');
+            }
         }
 
         async function loadClasses() {
@@ -599,14 +864,71 @@
 
         async function deleteItem(coll, id) {
             if(confirm("Verwijderen?")) {
-                await db.collection('users').doc(currentUser.uid).collection(coll).doc(id).delete();
-                if(id === activeClassId) {
-                    activeClassId = null;
-                    document.getElementById('active-class-display').innerText = "Geen klas geselecteerd";
+                try {
+                    await db.collection('users').doc(currentUser.uid).collection(coll).doc(id).delete();
+                    if(id === activeClassId) {
+                        activeClassId = null;
+                        document.getElementById('active-class-display').innerText = "Geen klas geselecteerd";
+                    }
+                    coll === 'classes' ? loadClasses() : loadCustomTemplates();
+                    showToast('Verwijderd ✓', 'success');
+                } catch(err) {
+                    showToast('Verwijderen mislukt.', 'error');
                 }
-                coll === 'classes' ? loadClasses() : loadCustomTemplates();
             }
         }
+
+        // --- DELEN ---
+        async function shareClass() {
+            if (!currentUser) return showToast('Log eerst in om te kunnen delen.', 'error');
+            openModal('share-modal');
+            const list = document.getElementById('share-classes-list');
+            list.innerHTML = '<div style="color:#888; font-size:0.85em;">Laden...</div>';
+            document.getElementById('share-link-section').style.display = 'none';
+            try {
+                const snap = await db.collection('users').doc(currentUser.uid).collection('classes').get();
+                list.innerHTML = '';
+                if (snap.empty) {
+                    list.innerHTML = '<div style="color:#888; font-size:0.85em;">Geen opgeslagen klassen gevonden.</div>';
+                    return;
+                }
+                snap.forEach(doc => {
+                    const data = doc.data();
+                    const div = document.createElement('div');
+                    div.className = 'item-row';
+                    div.innerHTML = `<span style="cursor:pointer;">${data.className}</span>`;
+                    div.querySelector('span').onclick = () => generateShareLink(doc.id, data);
+                    list.appendChild(div);
+                });
+            } catch(err) {
+                list.innerHTML = '<div style="color:#cf6679; font-size:0.85em;">Fout bij laden van klassen.</div>';
+            }
+        }
+
+        async function generateShareLink(classId, data) {
+            try {
+                // Create or update a public share document
+                const shareRef = db.collection('shared').doc(classId);
+                await shareRef.set({
+                    className: data.className,
+                    names: data.names || '',
+                    layout: data.layout || [],
+                    sharedBy: currentUser.uid,
+                    sharedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                const shareUrl = window.location.origin + window.location.pathname + '?share=' + classId;
+                document.getElementById('share-link-input').value = shareUrl;
+                document.getElementById('share-link-section').style.display = 'block';
+            } catch(err) {
+                showToast('Deellink aanmaken mislukt.', 'error');
+            }
+        }
+
+        function copyShareLink() {
+            const input = document.getElementById('share-link-input');
+            navigator.clipboard.writeText(input.value).then(() => showToast('Link gekopieerd! ✓', 'success'));
+        }
+
 
         // --- HELPERS ---
         function distributeNames() {
@@ -641,12 +963,84 @@
         function clearDeskTexts() { document.querySelectorAll('.desk:not(.teacher)').forEach(d => { d.querySelector('.desk-label').innerText = 'Leeg'; d.classList.add('empty'); }); saveData(); }
         function removeAllDesks() { if(confirm("Lokaal leegmaken?")) { classroom.innerHTML = ''; activeClassId = null; document.getElementById('active-class-display').innerText = "Geen klas geselecteerd"; saveData(); } }
 
+        function distributeRandomly() {
+            distributeNames();
+        }
+
         async function exportLayout() {
             document.body.classList.add('print-mode');
             await new Promise(r => setTimeout(r, 150));
-            html2canvas(classroom, { backgroundColor: 'white' }).then(c => {
-                const l = document.createElement('a'); l.download = 'klasopstelling.png'; l.href = c.toDataURL(); l.click();
-            }).finally(() => document.body.classList.remove('print-mode'));
+
+            const desks = Array.from(document.querySelectorAll('.desk'));
+            if (desks.length === 0) {
+                alert("Geen tafels om te exporteren!");
+                document.body.classList.remove('print-mode');
+                return;
+            }
+
+            let minX = Infinity, minY = Infinity, maxX = 0, maxY = 0;
+            desks.forEach(desk => {
+                const rect = desk.getBoundingClientRect();
+                minX = Math.min(minX, rect.left);
+                minY = Math.min(minY, rect.top);
+                maxX = Math.max(maxX, rect.right);
+                maxY = Math.max(maxY, rect.bottom);
+            });
+
+            const contentWidth = maxX - minX;
+            const contentHeight = maxY - minY;
+
+            const EXPORT_W = 1920;
+            const EXPORT_H = 1080;
+            const PADDING = 60;
+
+            const canvas = document.createElement('canvas');
+            canvas.width = EXPORT_W;
+            canvas.height = EXPORT_H;
+            const ctx = canvas.getContext('2d');
+
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, EXPORT_W, EXPORT_H);
+
+            const availW = EXPORT_W - 2*PADDING;
+            const availH = EXPORT_H - 2*PADDING;
+            const scaleX = availW / contentWidth;
+            const scaleY = availH / contentHeight;
+            const scale = Math.min(scaleX, scaleY);
+
+            const scaledW = contentWidth * scale;
+            const scaledH = contentHeight * scale;
+            const offsetX = (EXPORT_W - scaledW) / 2;
+            const offsetY = (EXPORT_H - scaledH) / 2;
+
+            desks.forEach(desk => {
+                const rect = desk.getBoundingClientRect();
+                const x = offsetX + (rect.left - minX) * scale;
+                const y = offsetY + (rect.top - minY) * scale;
+                const w = rect.width * scale;
+                const h = rect.height * scale;
+
+                ctx.fillStyle = desk.classList.contains('teacher') ? '#ddd' : '#f5f5f5';
+                ctx.strokeStyle = desk.classList.contains('teacher') ? '#000' : '#666';
+                ctx.lineWidth = 2 * scale;
+                ctx.fillRect(x, y, w, h);
+                ctx.strokeRect(x, y, w, h);
+
+                const label = desk.querySelector('.desk-label').innerText;
+                ctx.fillStyle = '#000';
+                const fontSize = Math.max(10, 14 * scale);
+                ctx.font = `bold ${fontSize}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(label, x + w/2, y + h/2);
+            });
+
+            const link = document.createElement('a');
+            link.download = 'klasopstelling.png';
+            link.href = canvas.toDataURL();
+            link.click();
+
+            document.body.classList.remove('print-mode');
         }
 
         // --- AUTO SCALE ON RESIZE ---
